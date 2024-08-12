@@ -2,4 +2,5 @@
 
 public sealed class OpenApiRouteResponseBodyContent
 {
+    public string ContentType { get; set; }
 }
