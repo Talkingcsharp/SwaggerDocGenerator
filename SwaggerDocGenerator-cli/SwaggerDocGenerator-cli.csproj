@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>SwaggerDocGenerator_cli</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SwaggerDocGenerator.Readers\SwaggerDocGenerator.Readers.csproj" />
+    <ProjectReference Include="..\SwaggerDocGenerator.SDG\SwaggerDocGenerator.SDG.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="swagger.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
