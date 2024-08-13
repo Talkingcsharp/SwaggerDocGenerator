@@ -17,6 +17,8 @@ public static class OpenApiDef
             internal static class OpenApiRequest
             {
                 public const string Content = "content";
+                public const string Schema = "schema";
+                public const string Refernece = "$ref";
             }
         }
     }

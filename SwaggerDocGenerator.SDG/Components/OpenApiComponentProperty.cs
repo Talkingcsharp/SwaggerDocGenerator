@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace SwaggerDocGenerator.SDG.Routes.RouteRequests;
+namespace SwaggerDocGenerator.SDG.Components;
 
-public sealed class OpenApiRequestBodyProperty
+public sealed class OpenApiComponentProperty
 {
     [JsonPropertyName("type")]
     public string? Type { get; set; }

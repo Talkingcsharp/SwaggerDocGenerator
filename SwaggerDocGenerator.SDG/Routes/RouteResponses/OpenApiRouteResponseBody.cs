@@ -1,10 +1,11 @@
-﻿using System.Text.Json.Serialization;
+﻿using SwaggerDocGenerator.SDG.Components;
+using System.Text.Json.Serialization;
 
 namespace SwaggerDocGenerator.SDG.Routes.RouteResponses;
 
 public sealed class OpenApiRouteResponseBody
 {
     [JsonPropertyName("description")]
-    public string Description { get; set; }
-
+    public string? Description { get; set; }
+    public Dictionary<string, OpenApiComponent>? Content { get; set; }
 }

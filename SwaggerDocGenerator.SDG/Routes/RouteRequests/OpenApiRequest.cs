@@ -1,5 +1,7 @@
-﻿namespace SwaggerDocGenerator.SDG.Routes.RouteRequests;
+﻿using SwaggerDocGenerator.SDG.Components;
+
+namespace SwaggerDocGenerator.SDG.Routes.RouteRequests;
 public sealed class OpenApiRequest
 {
-    public Dictionary<string, OpenApiRouteRequestBody>? Content { get; set; }
+    public Dictionary<string, OpenApiComponent>? Content { get; set; }
 }
