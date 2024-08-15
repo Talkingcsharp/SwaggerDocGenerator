@@ -7,6 +7,7 @@ using SwaggerDocGenerator.SDG.Routes;
 using SwaggerDocGenerator.SDG.Routes.RouteMethods;
 using SwaggerDocGenerator.SDG.Routes.RouteParameters;
 using SwaggerDocGenerator.SDG.Routes.RouteRequests;
+using SwaggerDocGenerator.SDG.Routes.RouteResponses;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -77,27 +78,34 @@ public class OpenApiJsonReader : IOpenApiReader
 
         var requestJson = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Request).Value?.AsObject();
         output.Request = ReadRequest(requestJson, mainObject);
-        return output;
 
-    }
-    private OpenApiRequest ReadRequest(JsonObject? input, JsonObject mainObject)
-    {
-        OpenApiRequest output = new OpenApiRequest();
-        if (input is null)
+        var responsesJson = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Responses).Value?.AsObject();
+        if (responsesJson is null)
         {
             return output;
         }
-        var contentJeon = input.FirstOrDefault(w => w.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRequest.Content).Value?.AsObject();
+        output.Response = ReadResponses(responsesJson, mainObject);
+        return output;
+
+    }
+    private OpenApiRouteRequest? ReadRequest(JsonObject? input, JsonObject mainObject)
+    {
+        OpenApiRouteRequest output = new OpenApiRouteRequest();
+        if (input is null)
+        {
+            return null;
+        }
+        var contentJeon = input.FirstOrDefault(w => w.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteRequest.Content).Value?.AsObject();
         if (contentJeon is null)
         {
-            return output;
+            return null;
         }
         output.Content = new Dictionary<string, SDG.Components.OpenApiComponent>();
         var enumerator = contentJeon.GetEnumerator();
         while (enumerator.MoveNext())
         {
-            string? schemaRefJson = enumerator.Current.Value?.AsObject().FirstOrDefault(w => w.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRequest.Schema).Value?
-                .AsObject().FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRequest.Refernece).Value?.ToString();
+            string? schemaRefJson = enumerator.Current.Value?.AsObject().FirstOrDefault(w => w.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteRequest.Schema).Value?
+                .AsObject().FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteRequest.Refernece).Value?.ToString();
 
             if (schemaRefJson is null)
             {
@@ -110,8 +118,53 @@ public class OpenApiJsonReader : IOpenApiReader
             }
             output.Content.Add(enumerator.Current.Key, requestBody);
         }
+        if (output.Content.Count == 0)
+        {
+            return null;
+        }
         return output;
     }
+    private OpenApiRouteResponse? ReadResponses(JsonObject? input, JsonObject mainObject)
+    {
+        if (input is null)
+        {
+            return null;
+        }
+
+        var enumerator = input.GetEnumerator();
+        if (enumerator is null)
+        {
+            return null;
+        }
+        OpenApiRouteResponse response = new();
+        response.ResponseCodes = new();
+        while (enumerator.MoveNext())
+        {
+            var responseBody = new OpenApiRouteResponseBody();
+            response.ResponseCodes.Add(enumerator.Current.Key, responseBody);
+            responseBody.Summary = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Summary).Value?.ToString();
+            responseBody.Description = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Description).Value?.ToString();
+            var jsonContents = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Content).Value?.AsObject();
+            responseBody.Content = ReadResponseBodies(jsonContents, mainObject);
+        }
+    }
+    private Dictionary<string, OpenApiComponent>? ReadResponseBodies(JsonObject? input, JsonObject mainObject)
+    {
+        if (input is null)
+        {
+            return null;
+        }
+        var enumerator = input.GetEnumerator();
+        if (enumerator is null)
+        {
+            return null;
+        }
+        var output = new Dictionary<string, OpenApiComponent>();
+        while (enumerator.MoveNext())
+        {
+        }
+    }
+
     private OpenApiComponent? ReadComponent(string path, JsonObject mainObject)
     {
         JsonObject? node = JsonPathUtility.GetJsonObjectByPath(mainObject, path)?.AsObject();
@@ -119,7 +172,39 @@ public class OpenApiJsonReader : IOpenApiReader
         {
             return null;
         }
-        return node.Deserialize<OpenApiComponent>();
+        var component = node.Deserialize<OpenApiComponent>();
+        if (component is null)
+        {
+            return null;
+        }
+        if (component.Properties is null)
+        {
+            return component;
+        }
+
+        foreach (var property in component.Properties)
+        {
+            if (property.Value?.Refernece is not null)
+            {
+                node = JsonPathUtility.GetJsonObjectByPath(mainObject, property.Value.Refernece)?.AsObject();
+                if (node is null)
+                {
+                    continue;
+                }
+                property.Value.ReferneceComponent = node.Deserialize<OpenApiComponent>();
+            }
+            if (property.Value?.Items?.Refernece is not null)
+            {
+                node = JsonPathUtility.GetJsonObjectByPath(mainObject, property.Value?.Items?.Refernece)?.AsObject();
+                if (node is null)
+                {
+                    continue;
+                }
+                property.Value.Items.ReferneceComponent = node.Deserialize<OpenApiComponent>();
+            }
+        }
+
+        return component;
     }
 
 
