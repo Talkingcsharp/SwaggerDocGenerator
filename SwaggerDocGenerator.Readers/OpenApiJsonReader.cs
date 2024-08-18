@@ -66,31 +66,41 @@ public class OpenApiJsonReader : IOpenApiReader
         }
         output.Tags = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Tags).Value?.AsArray().Select(x => x.ToString()).ToArray();
         var paramJsonList = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Parameters).Value?.AsArray();
-        if (paramJsonList is not null)
-        {
-            List<OpenApiRouteParameter?> paramList = new List<OpenApiRouteParameter?>();
-            foreach (var item in paramJsonList)
-            {
-                paramList.Add(item.Deserialize<OpenApiRouteParameter>());
-            }
-            output.Parameters = paramList.ToArray();
-        }
+        output.Parameters = ReadRequestMethodParameters(paramJsonList);
 
         var requestJson = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Request).Value?.AsObject();
-        output.Request = ReadRequest(requestJson, mainObject);
+        output.Request = ReadRouteMethodRequestBody(requestJson, mainObject);
 
         var responsesJson = input.FirstOrDefault(x => x.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.Responses).Value?.AsObject();
-        if (responsesJson is null)
-        {
-            return output;
-        }
-        output.Response = ReadResponses(responsesJson, mainObject);
-        return output;
+        output.Response = ReadRouteMethodResponse(responsesJson, mainObject);
 
+        return output;
     }
-    private OpenApiRouteRequest? ReadRequest(JsonObject? input, JsonObject mainObject)
+    private OpenApiRouteParameter[]? ReadRequestMethodParameters(JsonArray? input)
     {
-        OpenApiRouteRequest output = new OpenApiRouteRequest();
+        if (input is null)
+        {
+            return null;
+        }
+
+        List<OpenApiRouteParameter> output = new List<OpenApiRouteParameter>();
+        foreach (var item in input)
+        {
+            var parameter = item.Deserialize<OpenApiRouteParameter>();
+            if (parameter is null)
+            {
+                continue;
+            }
+            output.Add(parameter);
+        }
+        if (!output.Any())
+        {
+            return null;
+        }
+        return output.ToArray();
+    }
+    private OpenApiRouteRequest? ReadRouteMethodRequestBody(JsonObject? input, JsonObject mainObject)
+    {
         if (input is null)
         {
             return null;
@@ -100,6 +110,7 @@ public class OpenApiJsonReader : IOpenApiReader
         {
             return null;
         }
+        OpenApiRouteRequest output = new OpenApiRouteRequest();
         output.Content = new Dictionary<string, SDG.Components.OpenApiComponent>();
         var enumerator = contentJeon.GetEnumerator();
         while (enumerator.MoveNext())
@@ -124,31 +135,36 @@ public class OpenApiJsonReader : IOpenApiReader
         }
         return output;
     }
-    private OpenApiRouteResponse? ReadResponses(JsonObject? input, JsonObject mainObject)
+    private OpenApiRouteResponse? ReadRouteMethodResponse(JsonObject? input, JsonObject mainObject)
     {
         if (input is null)
         {
             return null;
         }
-
-        var enumerator = input.GetEnumerator();
+        OpenApiRouteResponse response = new();
+        response.ResponseCodes = ReadRouteMethodResponseCodes(input, mainObject);
+        return response;
+    }
+    private Dictionary<string, OpenApiRouteResponseBody>? ReadRouteMethodResponseCodes(JsonObject? input, JsonObject mainObject)
+    {
+        var enumerator = input?.GetEnumerator();
         if (enumerator is null)
         {
             return null;
         }
-        OpenApiRouteResponse response = new();
-        response.ResponseCodes = new();
+        Dictionary<string, OpenApiRouteResponseBody> output = new();
         while (enumerator.MoveNext())
         {
             var responseBody = new OpenApiRouteResponseBody();
-            response.ResponseCodes.Add(enumerator.Current.Key, responseBody);
             responseBody.Summary = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Summary).Value?.ToString();
             responseBody.Description = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Description).Value?.ToString();
             var jsonContents = enumerator.Current.Value?.AsObject().FirstOrDefault(s => s.Key == Abstractions.JsonPropertyNames.OpenApiDef.OpenApiRoute.OpenApiRouteMethod.OpenApiRouteResponse.OpenApiRouteResponseBody.Content).Value?.AsObject();
-            responseBody.Content = ReadResponseBodies(jsonContents, mainObject);
+            responseBody.Content = ReadRouteMethodResponseContentTypes(jsonContents, mainObject);
+            output.Add(enumerator.Current.Key, responseBody);
         }
+        return output;
     }
-    private Dictionary<string, OpenApiComponent>? ReadResponseBodies(JsonObject? input, JsonObject mainObject)
+    private Dictionary<string, OpenApiComponent>? ReadRouteMethodResponseContentTypes(JsonObject? input, JsonObject mainObject)
     {
         if (input is null)
         {
